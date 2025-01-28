@@ -1,0 +1,253 @@
+<?php
+
+define("ClientID", "Zoho Client ID");
+define("ClientSecret", "Zoho Client Secret");
+define("RedirectUrl", "http://example.com/callbackurl");
+define("ZohoCode", "Zoho Code");
+define("RefreshToken", "RefreshToken");
+
+function generate_refresh_token()
+{
+    $post = [
+        'code' => ZohoCode,
+        'redirect_uri' => RedirectUrl,
+        'client_id'  => ClientID,
+        'client_secret' => ClientSecret,
+        'grant_type' => 'authorization_code'
+    ];
+    $ch   =   curl_init();
+    curl_setopt($ch, CURLOPT_URL, "https://accounts.zoho.com/oauth/v2/token");
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($post));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/x-www-form-urlencoded')) .
+
+        $response = curl_exec($ch);
+    $response = json_encode($response);
+    var_dump($response);
+}
+function generate_access_token()
+{
+
+    $post = [
+        'refresh_token' => RefreshToken,
+        'client_id' => ClientID,
+        'client_secret' => ClientSecret,
+        'grant_type' => 'refresh_token'
+    ];
+
+    $ch   =   curl_init();
+    curl_setopt($ch, CURLOPT_URL, "https://accounts.zoho.com/oauth/v2/token");
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($post));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/x-www-form-urlencoded'));
+
+    $response = curl_exec($ch);
+    $response = json_decode($response);
+    $response = get_object_vars($response);
+
+    return $response['access_token'];
+}
+function get_records()
+{
+    $access_token = generate_access_token();
+
+    $ch   =   curl_init();
+    curl_setopt($ch, CURLOPT_URL, "https://www.zohoapis.com/crm/v2/Leads");
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Authorization: Zoho-oauthtoken ' . $access_token, 'Content-Type: application/x-www-form-urlencoded'));
+
+    $response = curl_exec($ch);
+    // $response = json_decode($response);
+    $response_data = json_decode($response, true); // true returns as an associative array
+
+    dump_and_die($response_data); // Dump the decoded response and stop execution
+}
+function insert_leads()
+{
+    $access_token = generate_access_token();
+
+
+    $post_data = [
+        'data' => [
+            [
+                "Company"   => '7 Test Rizwan ',
+                "clientEmail"            => 'clientEmail',
+                "description"            => 'description',
+                "orgID"            => 'orgID',
+                "deadline_timestamp"            => 'deadline_timestamp',
+                "paid_invoice_id"            => 'paid_invoice_id',
+                "payment_timestamp"            => 'payment_timestamp',
+                "paid_client_id"            => 'paid_client_id',
+                "invoice_pdf"            => 'invoice_pdf',
+                "timeNow"            => 'timeNow',
+                "uniq"            => 'uniq',
+                "status"            => 'status',
+                "service"            => 'service',
+                "SID"            => 'SID',
+                "invoiceByID"            => 'invoiceByID',
+                "invoiceByType"            => 'invoiceByType',
+                "amount_before_vat"            => 'amount_before_vat',
+                "hasCosting"            => 'hasCosting',
+                "cost"            => 'cost',
+                "comm"            => 'comm',
+                "extraCostYesNo"            => 'extraCostYesNo',
+                "extraCostAmount"            => 'extraCostAmount',
+                "analyticsType"            => 'analyticsType',
+                "companyFormType"            => 'companyFormType',
+                "v_source"            => 'v_source',
+                "v_source_name"            => 'v_source_name',
+                "remindID"            => 'remindID',
+                'Service_Type_Edited' => "Business Setup",
+
+                "invoiceID" => 'invoiceID',
+                "Last_Name" => '7 Test Rizwan',
+                "First_Name" => '7 Test Rizwan',
+                "EmaIl" => 'r.nawaz@inzone.ae',
+                "State" => 'Pk',
+                "Phone" => '+923155010125',
+                "Description" => 'Twewst',
+
+            ]
+        ],
+        'trigger' => [
+            "approval",
+            "workflow",
+            "blueprint"
+        ]
+    ];
+
+
+    $ch   =   curl_init();
+    curl_setopt($ch, CURLOPT_URL, "https://www.zohoapis.com/crm/v2/Leads");
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($post_data));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Authorization: Zoho-oauthtoken ' . $access_token, 'Content-Type: application/json'));
+    $response = curl_exec($ch);
+
+    curl_close($ch);
+
+    // Log the response
+    echo "API Response: " . $response . "\n";
+
+    // Decode the response
+    $response_data = json_decode($response);
+    if ($response_data->data && count($response_data->data) > 0) {
+        $createdById = $response_data->data[0]->details->id;
+        echo 'Record ID: ' . $createdById . '</br>';
+        return $createdById;
+    } else {
+        echo 'No data returned from API.';
+    }
+
+    // Check for errors in the response
+    if (isset($response_data->code) && $response_data->code != 'SUCCESS') {
+        echo "Error inserting lead: " . json_encode($response_data);
+    } else {
+        echo "Lead inserted successfully: " . json_encode($response_data);
+    }
+}
+function attachment_data($lead_id, $filePaths)
+{
+    // Generate the access token
+    $access_token = generate_access_token();
+
+    $file_ids = [];
+
+    foreach ($filePaths as $filePath) {
+        // Prepare the data for the file upload (multipart/form-data)
+        $file_post_data = [
+            'file' => new CURLFile($filePath), // Attach the file
+            'parent_id' => $lead_id,           // ID of the record
+            'parent_module' => 'Leads'         // Module name
+        ];
+
+        // Initialize cURL for file upload
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, "https://www.zohoapis.com/crm/v2/files");
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $file_post_data);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Zoho-oauthtoken ' . $access_token
+        ]);
+
+        // Execute the cURL request
+        $file_upload_response = curl_exec($ch);
+        curl_close($ch);
+
+        // Log the response for file upload
+        echo "File Upload Response: " . $file_upload_response . "\n";
+
+        // Decode the response to get the File ID
+        $file_response_data = json_decode($file_upload_response, true);
+
+        if (isset($file_response_data['data'][0]['details']['id'])) {
+            $file_ids[] = [
+                "file_id" => $file_response_data['data'][0]['details']['id'],
+                "display_name" => basename($filePath)
+            ];
+        } else {
+            echo "Error: File upload failed for {$filePath}. No file ID returned.\n";
+        }
+    }
+
+    // Now associate the uploaded files to the lead
+    if (!empty($file_ids)) {
+        $file_association_url = "https://www.zohoapis.com/crm/v2/Leads/{$lead_id}";
+
+        // Prepare the data for file association
+        $file_association_data = [
+            "data" => [
+                [
+                    "attached_files1" => $file_ids  // Attach multiple files
+                ]
+            ]
+        ];
+
+        // Initialize cURL for file association
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $file_association_url);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Zoho-oauthtoken ' . $access_token,
+            'Content-Type: application/json'
+        ]);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($file_association_data)); // Send as JSON
+
+        // Execute the cURL request
+        $file_association_response = curl_exec($ch);
+        curl_close($ch);
+
+        // Log the response for file association
+        echo "File Association Response: " . $file_association_response . "\n";
+    } else {
+        echo "Error: No files were uploaded successfully.\n";
+    }
+}
+function create_all_lead()
+{
+    $id = insert_leads();
+    echo 'ID = ' . $id . '</br>';
+    $filePaths = ['./task.pdf', './images.jpeg'];
+    attachment_data($id, $filePaths);
+}
+function dump_and_die($data)
+{
+    echo '<pre>';
+    echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    echo '</pre>';
+    die(); // Stops further script execution
+}
+generate_refresh_token();
+// create_all_lead();
+// get_records();
